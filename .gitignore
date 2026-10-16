@@ -1,0 +1,23 @@
+# Datos privados: copia las plantillas *.ejemplo.* y completa tus valores
+credenciales.h
+telegram.json
+receptor.json
+
+# Entorno de Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Modelo YOLO: se descarga solo la primera vez que corre contador.py
+*.pt
+
+# Fotos y registros generados al usar el sistema (pueden mostrar personas)
+*.jpg
+*.jpeg
+*.log
+
+# Compilacion de Arduino y editores
+build/
+.vscode/
+.idea/
