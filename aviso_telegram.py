@@ -24,8 +24,13 @@ def cargar_config():
 
 
 def llamar(token, metodo, **kwargs):
-    respuesta = requests.post(API.format(token=token, metodo=metodo), timeout=20, **kwargs)
-    datos = respuesta.json()
+    try:
+        respuesta = requests.post(API.format(token=token, metodo=metodo), timeout=20, **kwargs)
+        datos = respuesta.json()
+    except (requests.RequestException, ValueError) as error:
+        # El texto de error de requests incluye la URL, y la URL lleva el token del bot.
+        # Se muestra solo el tipo de error para que el token no quede en la consola ni en logs.
+        raise RuntimeError(f"no pude conectar con Telegram ({type(error).__name__})") from None
     if not datos.get("ok"):
         raise RuntimeError(f"Telegram respondio: {datos.get('description')}")
     return datos["result"]

@@ -136,7 +136,7 @@ String probarUnaUrl(const char *nombre, const char *url, bool segura,
   WiFiClient normal;
   WiFiClientSecure cifrado;
   // Para esta prueba no verificamos el certificado HTTPS (setInsecure); solo
-  // queremos saber si la red deja pasar la conexion. En produccion si se verifica.
+  // queremos saber si la red deja pasar la conexion.
   cifrado.setInsecure();
   HTTPClient http;
   http.setTimeout(15000);
@@ -172,12 +172,14 @@ void probarInternet() {
   }
   r += probarUnaUrl("HTTP, puerto 80 (example.com)", "http://example.com/", false);
   r += probarUnaUrl("HTTPS, puerto 443 (api.telegram.org)", "https://api.telegram.org/", true);
-  // Envia una foto real: asi sabremos cuanto tarda subir cada foto en produccion.
-  camera_fb_t *fb = esp_camera_fb_get();
-  if (fb) {
-    String nombre = String("Subir foto de ") + fb->len + " bytes (httpbin.org)";
-    r += probarUnaUrl(nombre.c_str(), "https://httpbin.org/post", true, fb->buf, fb->len);
-    esp_camera_fb_return(fb);
+  // Sube datos de relleno del tamano de una foto: asi sabremos cuanto tarda subir
+  // cada foto, sin enviar imagenes del aula (con personas) a un servicio de terceros.
+  const size_t TAMANO_FOTO = 30000;  // una foto VGA pesa ~30 KB
+  uint8_t *relleno = (uint8_t *)ps_calloc(TAMANO_FOTO, 1);
+  if (relleno) {
+    r += probarUnaUrl("Subir 30 KB de prueba (httpbin.org)", "https://httpbin.org/post", true,
+                      relleno, TAMANO_FOTO);
+    free(relleno);
   }
   resultadoInternet = r;
   Serial.print(r);
@@ -238,8 +240,10 @@ void setup() {
   servidor.begin();
   probarInternet();
 
-  // Igual que en la prueba de internet, por ahora no se verifica el certificado
-  // HTTPS: la clave ya impide que otros envien fotos. Pendiente para produccion.
+  // No se verifica el certificado HTTPS del tunel. Se probo (2026-10-21): la cadena
+  // ECDSA P-384 de Let's Encrypt que usa ngrok tarda mas de 2 s en verificarse en el
+  // ESP32-S3 (no acelera esas curvas por hardware) y ngrok corta la conexion a los
+  // 2 s. La clave X-Clave sigue impidiendo que otros envien fotos al contador.
   clienteServidor.setInsecure();
   httpServidor.setReuse(true);
   httpServidor.setConnectTimeout(8000);
@@ -272,6 +276,12 @@ void enviarFotoAlServidor() {
     // codigo < 0: no hubo conexion (contador apagado, tunel cerrado, sin internet).
     // 403: la clave no coincide con la de receptor.json.
     ultimoEnvioTexto = codigo > 0 ? "codigo " + String(codigo) : HTTPClient::errorToString(codigo);
+    // En https, "connection refused" tambien sale cuando falla la conexion cifrada:
+    // el detalle real lo da el cliente seguro.
+    char detalle[100];
+    if (codigo < 0 && segura && clienteServidor.lastError(detalle, sizeof(detalle)) != 0) {
+      ultimoEnvioTexto += String(" (TLS: ") + detalle + ")";
+    }
     Serial.println("Envio fallido: " + ultimoEnvioTexto);
   }
 }

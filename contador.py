@@ -123,6 +123,16 @@ def decodificar(jpeg):
     return foto
 
 
+def hora_actual():
+    """Hora en formato de 12 horas, por ejemplo 4:48:45 PM.
+
+    Se arma a mano en vez de usar %p: %p depende del idioma del sistema y en
+    espanol puede salir vacio o como "p. m.".
+    """
+    ahora = datetime.now()
+    return f"{ahora.hour % 12 or 12}:{ahora:%M:%S} {'AM' if ahora.hour < 12 else 'PM'}"
+
+
 def avisar(usar_telegram, hora, texto, imagen=None):
     """Imprime el aviso y lo envia por Telegram. Si Telegram falla, el contador sigue."""
     print(f"[{hora}] >>> AVISO: {texto}")
@@ -213,7 +223,7 @@ def main():
                 error = e
             # La hora se toma DESPUES de obtener la foto: en modo --recibir, obtener_foto
             # puede esperar varios segundos a que llegue la siguiente.
-            hora = datetime.now().strftime("%H:%M:%S")
+            hora = hora_actual()
             # monotonic() es un reloj que nunca retrocede: sirve para medir tiempos
             # aunque cambie la hora del PC.
             ahora = time.monotonic()

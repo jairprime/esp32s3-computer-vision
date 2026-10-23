@@ -50,6 +50,10 @@ class Receptor:
         receptor = self
 
         class Manejador(BaseHTTPRequestHandler):
+            # El tunel es publico: una conexion que no envia nada se cierra a los 10 s
+            # en vez de ocupar un hilo para siempre.
+            timeout = 10
+
             def do_POST(self):
                 if self.path != "/foto":
                     return self.responder(404, "no existe")

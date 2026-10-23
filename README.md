@@ -1,4 +1,4 @@
-# Contador de Personas — Laboratorio de Competencias Digitales 3
+# Detector de Personas — Laboratorio de Competencias Digitales 3
 
 Sistema de visión por computador que vigila el Laboratorio de Competencias Digitales 3 de la Universidad CESMAG y avisa por **Telegram** cuando el aula queda vacía, para saber cuándo ir a cerrarla sin revisar las cámaras de seguridad. Una placa **ESP32-S3** con cámara toma fotos del aula, un programa en **Python** cuenta las personas con el modelo **YOLO11n** y, cuando el aula lleva varios minutos sin nadie, envía al celular un mensaje con la foto del aula vacía.
 
@@ -22,9 +22,9 @@ Sistema de visión por computador que vigila el Laboratorio de Competencias Digi
   - **Pedir**: el PC, conectado a la red `LAB8-CAMARA`, le pide las fotos a la placa.
   - **Recibir**: la placa, lejos en el laboratorio, envía las fotos por internet a través de un túnel con dirección fija.
 - **Página web en la placa** para ver la cámara en vivo, apuntarla y revisar su estado.
-- **Autodiagnóstico de red**: al encender, la placa comprueba si puede salir a internet (DNS, HTTP, HTTPS y subida de una foto real).
+- **Autodiagnóstico de red**: al encender, la placa comprueba si puede salir a internet (DNS, HTTP, HTTPS y subida de 30 KB de prueba, sin enviar fotos del aula a terceros).
 - **Robustez**: descarta fotos dañadas, se reinicia sola si la cámara falla al arrancar y sigue funcionando aunque Telegram no responda.
-- **Seguridad**: las fotos enviadas por la placa llevan una clave en la cabecera `X-Clave` (comparada en tiempo constante), el receptor solo escucha en `127.0.0.1` y rechaza envíos de más de 2 MB.
+- **Seguridad**: las fotos llevan una clave en la cabecera `X-Clave` (comparada en tiempo constante); el receptor solo escucha en `127.0.0.1`, rechaza envíos de más de 2 MB y cierra las conexiones que no envían nada en 10 s; los errores de Telegram no muestran el token.
 
 ## Cómo funciona
 
@@ -64,8 +64,7 @@ esp32s3-computer-vision/
 ├── receptor.ejemplo.json        # Plantilla de receptor.json
 ├── telegram.ejemplo.json        # Plantilla de telegram.json
 ├── requirements.txt             # Dependencias (incluye el índice de PyTorch para CPU)
-├── .gitignore                   # Deja fuera de git los datos privados, venv/, el modelo y las fotos
-└── ver_foto.py                  # Obsoleto: etapa 1, fotos por USB (requiere pyserial)
+└── .gitignore                   # Deja fuera de git los datos privados, venv/, el modelo y las fotos
 ```
 
 ## Requisitos
@@ -314,7 +313,7 @@ python contador.py --recibir --sin-tunel --host 192.168.4.2
 - [x] Placa → ADMON → túnel → PC por internet: una foto cada 2–5 s, conteo correcto (2026-10-14).
 - [ ] Instalar la placa en el laboratorio y repetir la [prueba de punta a punta](#prueba-de-punta-a-punta), incluido el corte de energía.
 - [ ] Revocar los tokens que quedaron expuestos: bot de Telegram (`/revoke` en @BotFather) y authtoken de ngrok (*Reset* en el panel).
-- [ ] Verificar el certificado HTTPS en la placa (hoy usa `setInsecure`; la clave impide que otros envíen fotos).
+- [ ] Verificar el certificado HTTPS en la placa (hoy usa `setInsecure`). Probado el 2026-10-21: verificar la cadena ECDSA P-384 de Let's Encrypt que usa ngrok tarda más de 2 s en el ESP32-S3 y ngrok corta la conexión. La clave `X-Clave` impide que otros envíen fotos.
 - [ ] Privacidad (Ley 1581 de protección de datos personales): las fotos se analizan y se descartan; solo se conserva la del aula vacía.
 - [ ] Mover el contador del portátil a un servidor permanente (de la universidad o en la nube).
 - [ ] Alternativa sin servidor: que la placa detecte por sí sola si hay alguien y envíe el Telegram.
